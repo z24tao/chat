@@ -1,0 +1,90 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>Chat</title>
+</head>
+<body>
+<label for="your-id">Your ID</label>
+<input id="your-id" name="your-id" type="text" />
+<input type="button" onclick="setYourId()">
+<br />
+<label for="their-id">Their ID</label>
+<input id="their-id" name="their-id" type="text" />
+<input type="button" onclick="setTheirId()">
+<br />
+
+<p id="msg0"></p>
+<p id="msg1"></p>
+<p id="msg2"></p>
+<p id="msg3"></p>
+<p id="msg4"></p>
+<p id="msg5"></p>
+<p id="msg6"></p>
+<p id="msg7"></p>
+<p id="msg8"></p>
+<p id="msg9"></p>
+
+<label for="entry"></label>
+<input id="entry" name="entry" type="text" />
+<input type="button" onclick="send()">
+<p id="debug"></p>
+
+<script>
+    let yourId = -1;
+    let theirId = -1;
+    let messages = {};
+    let websocket;
+
+    const setYourId = () => {
+        yourId = parseInt(document.getElementById("your-id").value);
+        websocket = new WebSocket("ws://localhost:8080/user?id=" + yourId);
+        websocket.onopen = _ => console.log("connected to websocket");
+        websocket.onmessage = event => receiveMessage(event.data);
+    }
+
+    const setTheirId = () => theirId = parseInt(document.getElementById("their-id").value);
+
+    const send = () => {
+        let message = {
+            from: yourId,
+            to: theirId,
+            data: document.getElementById("entry").value
+        };
+
+        websocket.send(JSON.stringify(message));
+        refresh(message);
+        document.getElementById("entry").value = "";
+    }
+
+    const receiveMessage = data => {
+        refresh(JSON.parse(data));
+    }
+
+    const refresh = message => {
+        if (message.to in messages) {
+            if (messages[message.to].length > 10) messages[message.to].shift();
+            messages[message.to].push(message);
+        } else {
+            messages[message.to] = [message];
+        }
+        if (message.from in messages) {
+            if (messages[message.from].length > 10) messages[message.from].shift();
+            messages[message.from].push(message);
+        } else {
+            messages[message.from] = [message];
+        }
+
+        console.log(messages);
+        document.getElementById("debug").innerHTML = yourId + " " + theirId;
+        let convo = messages[theirId];
+        console.log(convo);
+        for (let i = 0; i < Math.min(convo.length, 10); i ++) {
+            document.getElementById("msg" + i).innerHTML = convo[i].data;
+            document.getElementById("msg" + i).style["color"] = convo[i].from === yourId ? "red" : "blue";
+        }
+    }
+</script>
+
+</body>
+</html>
